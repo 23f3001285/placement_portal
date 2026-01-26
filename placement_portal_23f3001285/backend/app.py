@@ -19,6 +19,9 @@ def create_app():
     from backend.routes.company import company_bp
     app.register_blueprint(company_bp, url_prefix="/company")
 
+    from backend.routes.student import student_bp
+    app.register_blueprint(student_bp, url_prefix="/student")
+
 
     with app.app_context():
         db.create_all()

@@ -23,3 +23,12 @@ def company_required(fn):
             return jsonify({"message": "Company access required"}), 403
         return fn(*args, **kwargs)
     return wrapper
+
+def student_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        claims = get_jwt()
+        if claims.get("role") != "student":
+            return jsonify({"message": "Student access required"}), 403
+        return fn(*args, **kwargs)
+    return wrapper
