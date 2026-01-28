@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from backend.models import db, Student, JobPosition, Application, Placement
 from backend.routes.utils import student_required
+from backend.tasks.exports import export_applications_csv
 
 student_bp = Blueprint("student", __name__)
 
@@ -93,5 +94,17 @@ def placement_history():
         }
         for p in placements
     ])
+
+
+@student_bp.route("/export", methods=["POST"])
+@jwt_required()
+@student_required
+def export_applications():
+    user_id = int(get_jwt_identity())
+    student = Student.query.filter_by(user_id=user_id).first()
+
+    export_applications_csv.delay(student.id)
+
+    return jsonify({"message": "Export started. You will be notified once done."})
 
 

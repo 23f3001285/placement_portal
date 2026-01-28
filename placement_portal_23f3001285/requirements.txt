@@ -2,3 +2,6 @@ Flask
 Flask-SQLAlchemy
 Flask-JWT-Extended
 Werkzeug
+redis
+celery
+Flask-Mail
