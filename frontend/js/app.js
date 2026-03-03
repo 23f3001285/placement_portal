@@ -1,14 +1,4 @@
-const App = {
-  template: `
-    <div class="container mt-4">
-      <router-view></router-view>
-    </div>
-  `
-}
-
-const app = Vue.createApp(App)
-
-// Axios config (keep this exactly as-is)
+// Axios config
 axios.defaults.baseURL = "http://127.0.0.1:5000"
 
 axios.interceptors.request.use(config => {
@@ -19,12 +9,30 @@ axios.interceptors.request.use(config => {
   return config
 })
 
+// Create app
+const app = Vue.createApp({
+  data() {
+    return {
+      role: localStorage.getItem("role") || null
+    }
+  },
+  methods: {
+    setRole(newRole) {
+      this.role = newRole
+    },
+    clearRole() {
+      this.role = null
+    }
+  },
+  template: `
+    <div>
+      <Sidebar v-if="role"/>
+      <router-view v-else/>
+    </div>
+  `
+})
+
+app.component("Sidebar", Sidebar)
 app.use(router)
-
-function logout() {
-  localStorage.removeItem("token")
-  localStorage.removeItem("role")
-  window.location.href = "#/"
-}
-
 app.mount("#app")
+

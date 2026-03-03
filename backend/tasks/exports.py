@@ -6,7 +6,7 @@ import csv
 def export_applications_csv(student_id):
     apps = Application.query.filter_by(student_id=student_id).all()
 
-    filename = f"applications_{student_id}.csv"
+    filename = f"exports/applications_{student_id}.csv"
 
     with open(filename, "w", newline="") as file:
         writer = csv.writer(file)

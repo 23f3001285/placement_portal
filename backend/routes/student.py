@@ -1,12 +1,77 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app, send_from_directory
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from backend.models import db, Student, JobPosition, Application, Placement
 from backend.routes.utils import student_required
 from backend.tasks.exports import export_applications_csv
 from backend.cache import redis_client
+from werkzeug.utils import secure_filename
 import json
+import os
+
 
 student_bp = Blueprint("student", __name__)
+
+@student_bp.route("/profile", methods=["GET"])
+@jwt_required()
+@student_required
+def get_profile():
+    user_id = int(get_jwt_identity())
+    student = Student.query.filter_by(user_id=user_id).first()
+
+    return jsonify({
+        "education": student.education,
+        "skills": student.skills,
+        "cgpa": student.cgpa,
+        "resume": student.resume
+    })
+
+
+@student_bp.route("/profile", methods=["PUT"])
+@jwt_required()
+@student_required
+def update_profile():
+    user_id = int(get_jwt_identity())
+    student = Student.query.filter_by(user_id=user_id).first()
+
+    # Get form fields (NOT request.json anymore)
+    education = request.form.get("education")
+    skills = request.form.get("skills")
+    cgpa_value = request.form.get("cgpa")
+
+    if education:
+        student.education = education
+
+    if skills:
+        student.skills = skills
+
+    if cgpa_value not in [None, ""]:
+        student.cgpa = float(cgpa_value)
+
+    # Handle Resume Upload
+    if "resume" in request.files:
+        file = request.files["resume"]
+
+        if file.filename != "":
+            filename = secure_filename(file.filename)
+
+            upload_folder = os.path.join(os.getcwd(), "uploads")
+            os.makedirs(upload_folder, exist_ok=True)
+
+            file_path = os.path.join(upload_folder, filename)
+            file.save(file_path)
+
+            student.resume = filename
+
+    db.session.commit()
+
+    return jsonify({"message": "Profile updated successfully"})
+
+
+@student_bp.route("/resume/<filename>", methods=["GET"])
+def download_resume(filename):
+    upload_folder = os.path.join(os.getcwd(), "uploads")
+    return send_from_directory(upload_folder, filename)
+
 
 @student_bp.route("/jobs", methods=["GET"])
 @jwt_required()
@@ -46,6 +111,9 @@ def apply_job(job_id):
 
     if job.status != "Approved":
         return jsonify({"message": "Job not open for applications"}), 403
+    
+    if job.min_cgpa and (student.cgpa is None or student.cgpa < job.min_cgpa):
+        return jsonify({"message": "You are not eligible (CGPA too low)"}), 403
 
     existing = Application.query.filter_by(
         student_id=student.id,
@@ -81,7 +149,11 @@ def view_applications():
             "application_id": a.id,
             "job_id": a.job_id,
             "status": a.status,
-            "applied_on": a.applied_on
+            "applied_on": a.applied_on,
+            "interview_date": a.interview_date,
+            "interview_location": a.interview_location,
+            "feedback": a.feedback,
+            "placement_id": a.placement.id if a.placement else None
         }
         for a in applications
     ])
@@ -98,6 +170,7 @@ def placement_history():
 
     return jsonify([
         {
+            "placement_id": p.id,
             "company_id": p.company_id,
             "position": p.position,
             "salary": p.salary,
@@ -105,6 +178,7 @@ def placement_history():
         }
         for p in placements
     ])
+
 
 
 @student_bp.route("/export", methods=["POST"])

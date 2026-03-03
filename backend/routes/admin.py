@@ -33,10 +33,12 @@ def admin_dashboard():
 @admin_required
 def approve_company(company_id):
     company = Company.query.get_or_404(company_id)
+    if company.approval_status != "Pending":
+        return jsonify({"message": "Only pending companies can be approved"}), 400
     company.approval_status = "Approved"
     redis_client.delete("admin_dashboard")
     for key in redis_client.scan_iter("companies_search:*"):
-        redis_client.delete(key)
+        redis_client.delete(key)    
     db.session.commit()
     return jsonify({"message": "Company approved"})
 
@@ -61,10 +63,16 @@ def get_all_jobs():
 @admin_required
 def reject_company(company_id):
     company = Company.query.get_or_404(company_id)
+    if company.approval_status != "Pending":
+        return jsonify({"message": "Only pending companies can be rejected"}), 400
     company.approval_status = "Rejected"
+    for job in company.jobs:
+        job.status = "Closed"
+        for app in job.applications:
+            app.status = "Rejected"
     redis_client.delete("admin_dashboard")
     for key in redis_client.scan_iter("companies_search:*"):
-        redis_client.delete(key)
+        redis_client.delete(key)    
     db.session.commit()
     return jsonify({"message": "Company rejected"})
 
@@ -108,10 +116,11 @@ def get_students():
 
     data = [
         {
-            "id": s.id,
+            "id": s.user.id,
             "email": s.user.email,
             "cgpa": s.cgpa,
-            "skills": s.skills
+            "skills": s.skills,
+            "is_active": s.user.is_active
         }
         for s in students
     ]
@@ -131,21 +140,61 @@ def get_companies():
         return jsonify(json.loads(cached))
 
     companies = Company.query.filter(
-        Company.name.contains(query)
+        db.or_(
+            Company.name.contains(query),
+            Company.industry.contains(query)
+        )
     ).all()
 
     data = [
         {
             "id": c.id,
+            "user_id": c.user.id,
             "name": c.name,
             "industry": c.industry,
-            "status": c.approval_status
+            "status": c.approval_status,
+            "is_active": c.user.is_active
         }
         for c in companies
     ]
 
     redis_client.setex(cache_key, 300, json.dumps(data))
     return jsonify(data)
+
+
+@admin_bp.route("/company/<int:company_id>/deactivate", methods=["PUT"])
+@jwt_required()
+@admin_required
+def deactivate_company(company_id):
+    company = Company.query.get_or_404(company_id)
+
+    if company.approval_status != "Approved":
+        return jsonify({"message": "Only approved companies can be deactivated"}), 400
+
+    company.user.is_active = False
+    redis_client.delete("admin_dashboard")
+    for key in redis_client.scan_iter("companies_search:*"):
+        redis_client.delete(key)
+    db.session.commit()
+
+    return jsonify({"message": "Company deactivated"})
+
+@admin_bp.route("/company/<int:company_id>/activate", methods=["PUT"])
+@jwt_required()
+@admin_required
+def activate_company(company_id):
+    company = Company.query.get_or_404(company_id)
+
+    if company.approval_status != "Approved":
+        return jsonify({"message": "Only approved companies can be activated"}), 400
+
+    company.user.is_active = True
+    redis_client.delete("admin_dashboard")
+    for key in redis_client.scan_iter("companies_search:*"):
+        redis_client.delete(key)
+    db.session.commit()
+
+    return jsonify({"message": "Company activated"})
 
 
 @admin_bp.route("/user/<int:user_id>/deactivate", methods=["PUT"])

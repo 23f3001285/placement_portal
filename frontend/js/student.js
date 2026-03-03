@@ -1,33 +1,125 @@
 const StudentDashboard = {
   template: `
-    <div class="container mt-4">
-      <div class="d-flex justify-content-between align-items-center">
-        <h3>Student Dashboard</h3>
-        <button class="btn btn-outline-danger btn-sm" onclick="logout()">
-          Logout
+    <div>
+
+      <h4 class="mb-3">Student Dashboard</h4>
+
+      <!-- Profile Button -->
+      <router-link to="/student/profile"
+                   class="btn btn-outline-primary btn-sm mb-3">
+        Edit Profile
+      </router-link>
+
+      <!-- Job Search -->
+      <div class="card shadow-sm p-3 mb-4">
+        <h5>Search Placement Drives</h5>
+
+        <input v-model="searchQuery"
+               class="form-control"
+               placeholder="Search by title or skills"
+               @input="filterJobs">
+      </div>
+
+      <!-- Available Jobs -->
+      <h5>Available Placement Drives</h5>
+
+      <div class="row">
+        <div class="col-md-4 mb-3"
+             v-for="job in filteredJobs"
+             :key="job.job_id">
+
+          <div class="card shadow-sm p-3 h-100">
+            <h5>{{ job.title }}</h5>
+
+            <p><strong>Salary:</strong> {{ job.salary || 'Not specified' }}</p>
+            <p><strong>Skills:</strong> {{ job.skills_required || 'N/A' }}</p>
+
+            <button class="btn btn-success btn-sm mt-auto"
+                    @click="apply(job.job_id)">
+              Apply
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <hr class="my-4">
+
+      <!-- My Applications -->
+      <h5>My Applications</h5>
+
+      <div class="card shadow-sm mb-3 p-3"
+           v-for="app in applications"
+           :key="app.application_id">
+
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <strong>Job ID:</strong> {{ app.job_id }}
+            <br>
+            <small>Applied On: {{ formatDate(app.applied_on) }}</small>
+          </div>
+
+          <span class="badge"
+                :class="{
+                  'bg-secondary': app.status==='Applied',
+                  'bg-warning text-dark': app.status==='Shortlisted',
+                  'bg-info': app.status==='Interview',
+                  'bg-success': app.status==='Selected',
+                  'bg-danger': app.status==='Rejected'
+                }">
+            {{ app.status }}
+          </span>
+
+          <div v-if="app.interview_date" class="mt-1">
+            <small class="text-info">
+              Interview: {{ app.interview_date }} ({{ app.interview_location }})
+            </small>
+          </div>
+
+          <div v-if="app.feedback" class="mt-1">
+            <small class="text-muted">
+              Feedback: {{ app.feedback }}
+            </small>
+          </div>
+
+        </div>
+        <a v-if="app.placement_id"
+           :href="'/company/offer/' + app.placement_id"
+           target="_blank"
+           class="btn btn-success btn-sm">
+          Download Offer Letter
+        </a>
+      </div>
+
+      <hr class="my-4">
+
+      <!-- Placement History -->
+      <h5>Placement History</h5>
+
+      <div v-if="placements.length === 0"
+           class="alert alert-light">
+        No placements yet.
+      </div>
+
+      <div class="card shadow-sm mb-3 p-3"
+           v-for="p in placements"
+           :key="p.company_id">
+
+        <h6>{{ p.position }}</h6>
+        <div>Company ID: {{ p.company_id }}</div>
+        <div>Salary: {{ p.salary }}</div>
+        <div>Joining Date: {{ p.joining_date }}</div>
+
+        <button v-if="p.placement_id"
+                @click="downloadOffer(p.placement_id)"
+                class="btn btn-success btn-sm">
+          Download Offer Letter
         </button>
       </div>
 
-      <h5 class="mt-4">Available Jobs</h5>
-      <ul class="list-group mb-4">
-        <li v-for="job in jobs" class="list-group-item d-flex justify-content-between">
-          {{ job.title }}
-          <button class="btn btn-sm btn-success"
-                  @click="apply(job.job_id)">
-            Apply
-          </button>
-        </li>
-      </ul>
+      <hr class="my-4">
 
-      <h5>Your Applications</h5>
-      <ul class="list-group">
-        <li v-for="app in applications" class="list-group-item">
-          Job ID: {{ app.job_id }} —
-          <strong>{{ app.status }}</strong>
-        </li>
-      </ul>
-
-      <h5 class="mt-4">Export Data</h5>
+      <!-- Export -->
       <button class="btn btn-outline-primary"
               @click="exportCSV">
         Export Applications as CSV
@@ -38,24 +130,51 @@ const StudentDashboard = {
   data() {
     return {
       jobs: [],
-      applications: []
+      filteredJobs: [],
+      applications: [],
+      placements: [],
+      searchQuery: ""
     }
   },
   async mounted() {
-    const jobsRes = await axios.get("/student/jobs")
-    this.jobs = jobsRes.data
-
-    const appsRes = await axios.get("/student/applications")
-    this.applications = appsRes.data
+    await this.fetchJobs()
+    await this.fetchApplications()
+    await this.fetchPlacements()
   },
   methods: {
+
+    async fetchJobs() {
+      const res = await axios.get("/student/jobs")
+      this.jobs = res.data
+      this.filteredJobs = res.data
+    },
+
+    async fetchApplications() {
+      const res = await axios.get("/student/applications")
+      this.applications = res.data
+    },
+
+    async fetchPlacements() {
+      const res = await axios.get("/student/placements")
+      this.placements = res.data
+    },
+
+    filterJobs() {
+      const q = this.searchQuery.toLowerCase()
+
+      this.filteredJobs = this.jobs.filter(j =>
+        j.title.toLowerCase().includes(q) ||
+        (j.skills_required && j.skills_required.toLowerCase().includes(q))
+      )
+    },
+
     async apply(jobId) {
       try {
         await axios.post(`/student/jobs/${jobId}/apply`)
         alert("Applied successfully")
-        location.reload()
+        await this.fetchApplications()
       } catch (err) {
-        alert(err.response.data.message)
+        alert(err.response?.data?.message || "Application failed")
       }
     },
 
@@ -66,7 +185,25 @@ const StudentDashboard = {
       } catch (err) {
         alert("Export failed")
       }
+    },
+
+    async downloadOffer(id) {
+      const res = await axios.get(`/company/offer/${id}`, {
+        responseType: "blob"
+      })
+    
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const link = document.createElement("a")
+      link.href = url
+      link.setAttribute("download", "offer_letter.pdf")
+      document.body.appendChild(link)
+      link.click()
+    },
+
+    formatDate(dateStr) {
+      return new Date(dateStr).toLocaleDateString()
     }
 
   }
 }
+

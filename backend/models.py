@@ -20,7 +20,7 @@ class Company(db.Model):
     industry = db.Column(db.String(100))
     location = db.Column(db.String(100))
     approval_status = db.Column(db.String(20), default="Pending")
-    jobs = db.relationship("JobPosition", backref="company", lazy=True)
+    jobs = db.relationship("JobPosition", backref="company", cascade="all, delete", lazy=True)
 
 
 class Student(db.Model):
@@ -40,22 +40,23 @@ class JobPosition(db.Model):
     description = db.Column(db.Text)
     salary = db.Column(db.String(50))
     skills_required = db.Column(db.Text)
+    min_cgpa = db.Column(db.Float, default=0.0)
     status = db.Column(db.String(20), default="Pending")  # Pending / Approved / Closed
     applications = db.relationship("Application", backref="job", lazy=True)
+    experience_required = db.Column(db.String(100))
+    benefits = db.Column(db.Text)
 
 
 class Application(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey("student.id"), nullable=False)
     job_id = db.Column(db.Integer, db.ForeignKey("job_position.id"), nullable=False)
-
-    status = db.Column(
-        db.String(30),
-        default="Applied"
-    )  # Applied / Shortlisted / Interview / Selected / Rejected
-
+    status = db.Column(db.String(30), default="Applied")  # Applied / Shortlisted / Interview / Selected / Rejected
+    interview_date = db.Column(db.DateTime, nullable=True)
+    interview_location = db.Column(db.String(200), nullable=True)
     applied_on = db.Column(db.DateTime, default=datetime.utcnow)
     placement = db.relationship("Placement", backref="application", uselist=False)
+    feedback = db.Column(db.Text)
 
 
 class Placement(db.Model):
