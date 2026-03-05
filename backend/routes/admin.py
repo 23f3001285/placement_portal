@@ -4,6 +4,7 @@ from flask_jwt_extended import jwt_required
 from backend.models import db, User, Company, Student, JobPosition, Application
 from backend.routes.utils import admin_required
 from backend.cache import redis_client
+from backend.tasks.reports import generate_monthly_report
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -246,3 +247,9 @@ def get_all_applications():
     redis_client.setex(cache_key, 180, json.dumps(data))
     return jsonify(data)
 
+@admin_bp.route("/report", methods=["POST"])
+@jwt_required()
+@admin_required
+def generate_report():
+    generate_monthly_report.delay()
+    return jsonify({"message": "Report generation started"})

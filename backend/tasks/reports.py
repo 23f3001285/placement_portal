@@ -1,6 +1,7 @@
 from backend.celery_app import celery
 from backend.models import JobPosition, Application, Placement
 from datetime import datetime
+import os
 
 @celery.task
 def generate_monthly_report():
@@ -16,7 +17,15 @@ def generate_monthly_report():
     <p>Generated on: {datetime.now()}</p>
     """
 
-    with open("monthly_report.html", "w") as f:
+    BASE_DIR = os.getcwd()
+    REPORT_PATH = os.path.join(BASE_DIR, "reports")
+
+    os.makedirs(REPORT_PATH, exist_ok=True)
+
+    file_path = os.path.join(REPORT_PATH, "monthly_report.html")
+
+    with open(file_path, "w") as f:
         f.write(report)
 
+    print("Report saved at:", file_path)
     print("Monthly report generated and sent to admin")

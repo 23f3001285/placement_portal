@@ -7,6 +7,17 @@
     background-color: #0d6efd !important;
     color: white !important;
   }
+  .alert {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-radius: 8px;
+  }
+  .card {
+    border-radius: 10px;
+  }
+  
+  .card h5 {
+    font-weight: 600;
+  }
   </style>
 
   <!-- Bootstrap -->
@@ -25,7 +36,22 @@
 </head>
 
 <body>
-  <div id="app"></div>
+  <div id="app">
+
+    <!-- Global Alert -->
+    <div v-if="alertMessage"
+         :class="'alert alert-' + alertType"
+         style="position:fixed; top:20px; right:20px; z-index:9999; min-width:250px;">
+
+      {{ alertMessage }}
+
+      <button type="button"
+              class="btn-close float-end"
+              @click="alertMessage=''">
+      </button>
+
+    </div>
+  </div>
 
 <script src="js/auth.js"></script>
 <script src="js/register.js"></script>

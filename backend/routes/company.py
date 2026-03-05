@@ -271,14 +271,35 @@ def generate_offer_letter(placement_id):
 
     buffer = BytesIO()
     p = canvas.Canvas(buffer)
-
-    p.drawString(100, 750, "Offer Letter")
-    p.drawString(100, 770, "Congratulations!")
-    p.drawString(100, 750, "We are pleased to offer you the following position:")
-    p.drawString(100, 730, f"Position: {placement.position}")
-    p.drawString(100, 710, f"Salary: {placement.salary}")
-    p.drawString(100, 690, f"Joining Date: {placement.joining_date}")
-
+    
+    # Header
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(100, 800, "Placement Portal")
+    
+    p.setFont("Helvetica", 11)
+    p.drawString(100, 780, f"Date: {datetime.now().date()}")
+    
+    # Title
+    p.setFont("Helvetica-Bold", 18)
+    p.drawString(200, 750, "Offer Letter")
+    
+    # Body
+    p.setFont("Helvetica", 12)
+    p.drawString(100, 720, "Congratulations!")
+    
+    p.drawString(
+        100,
+        700,
+        "We are pleased to offer you the following position:"
+    )
+    
+    p.drawString(100, 670, f"Position: {placement.position}")
+    p.drawString(100, 650, f"Salary: {placement.salary}")
+    p.drawString(100, 630, f"Joining Date: {placement.joining_date}")
+    
+    # Closing
+    p.drawString(100, 590, "We look forward to having you join our team.")
+    
     p.save()
     buffer.seek(0)
 

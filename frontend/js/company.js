@@ -38,7 +38,7 @@ const CompanyDashboard = {
       <div v-if="companyStatus==='Approved'"
            class="card shadow-sm p-4 mb-4">
 
-        <h5>Create Placement Drive</h5>
+        <h5 class="mt-4 mb-3">Create Placement Drive</h5>
 
         <input v-model="newJob.title"
                class="form-control mb-2"
@@ -63,7 +63,7 @@ const CompanyDashboard = {
       </div>
 
       <!-- Drives List -->
-      <h5>Your Drives</h5>
+      <h5 class="mt-4 mb-3">Your Drives</h5>
 
       <div class="card shadow-sm mb-3 p-3"
            v-for="job in jobs"
@@ -109,7 +109,7 @@ const CompanyDashboard = {
       <div v-if="applications.length"
            class="mt-4">
 
-        <h5>Applicants</h5>
+        <h5 class="mt-4 mb-3">Applicants</h5>
 
         <div class="card shadow-sm p-3 mb-2"
              v-for="app in applications"
@@ -121,7 +121,7 @@ const CompanyDashboard = {
               Student ID: {{ app.student_id }}
             </div>
 
-            <span class="badge"
+            <span class="badge me-2 align-self-center"
                   :class="{
                     'bg-secondary': app.status==='Applied',
                     'bg-warning text-dark': app.status==='Shortlisted',
@@ -177,7 +177,7 @@ const CompanyDashboard = {
         <p><strong>Skills:</strong> {{ selectedStudent.skills }}</p>
 
         <a v-if="selectedStudent.resume"
-           :href="axios.defaults.baseURL + '/student/resume/' + selectedStudent.resume"
+           :href="resumeUrl(selectedStudent.resume)"
            target="_blank"
            class="btn btn-sm btn-outline-primary">
           Download Resume
@@ -224,8 +224,17 @@ const CompanyDashboard = {
     },
 
     async createJob() {
-      await axios.post("/company/jobs", this.newJob)
-      this.loadJobs()
+      try {
+        await axios.post("/company/jobs", this.newJob)
+        this.$root.showAlert("Drive submitted for approval", "success")
+        this.loadJobs()      
+      } catch (err) {
+        this.$root.showAlert(
+          err.response?.data?.message || "Drive creation failed",
+          "danger"
+        )
+      
+      }
     },
 
     async loadApplicants(jobId) {
@@ -237,7 +246,7 @@ const CompanyDashboard = {
     async updateStatus(applicationId, status) {
 
       let payload = { status }
-        
+
       if (status === "Interview") {
         const dateInput = prompt("Enter interview date (YYYY-MM-DDTHH:MM)")
         const locationInput = prompt("Enter interview location/link")
@@ -253,20 +262,41 @@ const CompanyDashboard = {
     
       try {
         await axios.put(`/company/applications/${applicationId}/status`, payload)
-        this.loadApplicants(this.selectedJobId)
       } catch (err) {
-        alert(err.response?.data?.message || "Invalid transition")
+        this.$root.showAlert(err.response?.data?.message, "danger")
       }
+    
+      // ALWAYS refresh after attempt
+      this.loadApplicants(this.selectedJobId)
     },
 
     async closeJob(jobId) {
-      await axios.put(`/company/jobs/${jobId}/close`)
-      this.loadJobs()
+      try {
+        await axios.put(`/company/jobs/${jobId}/close`)     
+        this.$root.showAlert("Drive closed successfully", "warning")
+        this.loadJobs()      
+      } catch (err) {      
+        this.$root.showAlert(
+          err.response?.data?.message || "Failed to close drive",
+          "danger"
+        )     
+      }
     },
 
     async viewStudent(studentId) {
-      const res = await axios.get(`/company/student/${studentId}`)
-      this.selectedStudent = res.data
+      try {
+        const res = await axios.get(`/company/student/${studentId}`)     
+        this.selectedStudent = res.data
+      } catch (err) {      
+        this.$root.showAlert(
+          err.response?.data?.message || "Failed to load student profile",
+          "danger"
+        )      
+      }
+    },
+
+    resumeUrl(filename) {
+      return axios.defaults.baseURL + "/student/resume/" + filename
     }
 
   }

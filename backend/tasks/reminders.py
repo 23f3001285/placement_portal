@@ -10,7 +10,7 @@ def send_daily_reminders():
 
     upcoming_interviews = Application.query.filter(
         Application.status == "Interview",
-        Application.interview_date is not None,
+        Application.interview_date != None,
         Application.interview_date >= now,
         Application.interview_date <= next_24_hours
     ).all()

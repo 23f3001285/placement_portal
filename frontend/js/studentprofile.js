@@ -86,12 +86,17 @@ const StudentProfile = {
         formData.append("resume", this.resumeFile)
       }
 
-      await axios.put("/student/profile", formData, {
-        headers: { "Content-Type": "multipart/form-data" }
-      })
-
-      this.message = "Profile updated successfully"
+      try {
+        await axios.put("/student/profile", formData, {
+          headers: { "Content-Type": "multipart/form-data" }
+        })   
+        this.$root.showAlert("Profile updated successfully", "success")   
+      } catch (err) {   
+        this.$root.showAlert(
+        err.response?.data?.message || "Profile update failed",
+        "danger"
+      )    
     }
-
+   }      
   }
 }

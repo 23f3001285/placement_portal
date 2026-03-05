@@ -9,32 +9,38 @@ const AdminDashboard = {
       <div class="col-md-3 mb-3">
         <div class="card shadow-sm text-center p-3">
           <h6 class="text-muted">Students</h6>
-          <h3>{{ stats.total_students }}</h3>
+          <h3 class="text-primary">{{ stats.total_students }}</h3>
         </div>
       </div>
 
       <div class="col-md-3 mb-3">
         <div class="card shadow-sm text-center p-3">
           <h6 class="text-muted">Companies</h6>
-          <h3>{{ stats.total_companies }}</h3>
+          <h3 class="text-primary">{{ stats.total_companies }}</h3>
         </div>
       </div>
 
       <div class="col-md-3 mb-3">
         <div class="card shadow-sm text-center p-3">
           <h6 class="text-muted">Drives</h6>
-          <h3>{{ stats.total_jobs }}</h3>
+          <h3 class="text-primary">{{ stats.total_jobs }}</h3>
         </div>
       </div>
 
       <div class="col-md-3 mb-3">
         <div class="card shadow-sm text-center p-3">
           <h6 class="text-muted">Applications</h6>
-          <h3>{{ stats.total_applications }}</h3>
+          <h3 class="text-primary">{{ stats.total_applications }}</h3>
         </div>
       </div>
 
     </div>
+
+    <button class="btn btn-outline-primary mt-3"
+            :disabled="reportLoading"
+            @click="generateReport">
+      {{ reportLoading ? "Generating..." : "Generate Monthly Report" }}
+    </button>
 
     <div class="card shadow-sm p-4">
       <h5 class="mb-3">System Overview</h5>
@@ -45,7 +51,9 @@ const AdminDashboard = {
 `,
   data() {
     return {
-      stats: {}
+      stats: {},
+      chart: null,
+      reportLoading: false
     }
   },
   async mounted() {
@@ -53,9 +61,14 @@ const AdminDashboard = {
     this.stats = res.data
 
     this.$nextTick(() => {
-      const ctx = document.getElementById("adminChart")
 
-      new Chart(ctx, {
+      const ctx = document.getElementById("adminChart")
+        
+      if (this.chart) {
+        this.chart.destroy()
+      }
+    
+      this.chart = new Chart(ctx, {
         type: "bar",
         data: {
           labels: ["Students", "Companies", "Drives", "Applications"],
@@ -76,8 +89,27 @@ const AdminDashboard = {
           }]
         }
       })
+    
     })
+  },
+  methods: {
+  async generateReport() {
+    this.reportLoading = true
+    try {
+      console.log("REPORT BUTTON CLICKED")
+      await axios.post("/admin/report")
+      this.$root.showAlert("Monthly report generation started", "info")
+    } catch (err) {
+      console.error("REPORT ERROR:", err)
+      this.$root.showAlert(
+        console.error(err),
+        err.response?.data?.message || "Report generation failed",
+        "danger"
+      )
+    }
+    this.reportLoading = false
   }
+}
 }
 
 const AdminCompanies = {
@@ -96,10 +128,10 @@ const AdminCompanies = {
              :key="company.id">
 
           <div class="card shadow-sm p-3">
-            <h5>{{ company.name }}</h5>
+            <h5 class="mt-0 mb-2">{{ company.name }}</h5>
             <p><strong>Industry:</strong> {{ company.industry }}</p>
 
-            <span class="badge"
+            <span class="badge me-2 align-self-center"
                   :class="{
                     'bg-warning text-dark': company.status==='Pending',
                     'bg-success': company.status==='Approved',
@@ -159,21 +191,52 @@ const AdminCompanies = {
       this.companies = res.data
     },
     async approve(id) {
-      await axios.put(`/admin/company/${id}/approve`)
-      this.fetchCompanies()
+      try {
+        await axios.put(`/admin/company/${id}/approve`)
+        this.$root.showAlert("Company approved", "success")
+        this.fetchCompanies()     
+      } catch (err) {     
+        this.$root.showAlert(
+          err.response?.data?.message || "Approval failed",
+          "danger"
+        )      
+      }
     },
     async reject(id) {
-      await axios.put(`/admin/company/${id}/reject`)
-      this.fetchCompanies()
+      try {      
+        await axios.put(`/admin/company/${id}/reject`)      
+        this.$root.showAlert("Company rejected", "warning")      
+        this.fetchCompanies()     
+      } catch (err) {      
+        this.$root.showAlert(
+          err.response?.data?.message || "Rejection failed",
+          "danger"
+        )      
+      }
     },
     async deactivateCompany(companyId) {
-      await axios.put(`/admin/company/${companyId}/deactivate`)
-      this.fetchCompanies()
+      try {     
+        await axios.put(`/admin/company/${companyId}/deactivate`)      
+        this.$root.showAlert("Company deactivated", "warning")      
+        this.fetchCompanies()      
+      } catch (err) {      
+        this.$root.showAlert(
+          err.response?.data?.message || "Failed to deactivate",
+          "danger"
+        )      
+      }
     },
-
     async activateCompany(companyId) {
-      await axios.put(`/admin/company/${companyId}/activate`)
-      this.fetchCompanies()
+      try {     
+        await axios.put(`/admin/company/${companyId}/activate`)     
+        this.$root.showAlert("Company activated", "success")     
+        this.fetchCompanies()      
+      } catch (err) {     
+        this.$root.showAlert(
+          err.response?.data?.message || "Failed to activate",
+          "danger"
+        )      
+      }
     }
 
   }
@@ -259,7 +322,7 @@ const AdminDrives = {
           <div class="card shadow-sm p-3">
             <h5>{{ job.title }}</h5>
 
-            <span class="badge"
+            <span class="badge me-2 align-self-center"
                   :class="{
                     'bg-warning text-dark': job.status==='Pending',
                     'bg-success': job.status==='Approved',
@@ -288,7 +351,7 @@ const AdminDrives = {
 
       <hr class="my-4">
 
-      <h5>All Applications</h5>
+      <h5 class="mt-4 mb-3">All Applications</h5>
 
       <div class="card shadow-sm mb-2 p-3"
            v-for="app in applications"

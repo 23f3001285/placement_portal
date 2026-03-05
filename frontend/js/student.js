@@ -13,9 +13,13 @@ const StudentDashboard = {
       <!-- Job Search -->
       <div class="card shadow-sm p-3 mb-4">
         <h5>Search Placement Drives</h5>
+        <div v-if="placements.length === 0"
+             class="text-muted text-center py-4">
+          No placements yet
+        </div>
 
         <input v-model="searchQuery"
-               class="form-control"
+               class="form-control form-control-sm"
                placeholder="Search by title or skills"
                @input="filterJobs">
       </div>
@@ -59,7 +63,7 @@ const StudentDashboard = {
             <small>Applied On: {{ formatDate(app.applied_on) }}</small>
           </div>
 
-          <span class="badge"
+          <span class="badge me-2 align-self-center"
                 :class="{
                   'bg-secondary': app.status==='Applied',
                   'bg-warning text-dark': app.status==='Shortlisted',
@@ -83,12 +87,6 @@ const StudentDashboard = {
           </div>
 
         </div>
-        <a v-if="app.placement_id"
-           :href="'/company/offer/' + app.placement_id"
-           target="_blank"
-           class="btn btn-success btn-sm">
-          Download Offer Letter
-        </a>
       </div>
 
       <hr class="my-4">
@@ -171,19 +169,35 @@ const StudentDashboard = {
     async apply(jobId) {
       try {
         await axios.post(`/student/jobs/${jobId}/apply`)
-        alert("Applied successfully")
+      
+        this.$root.showAlert("Application submitted successfully", "success")
+      
         await this.fetchApplications()
+      
       } catch (err) {
-        alert(err.response?.data?.message || "Application failed")
+      
+        this.$root.showAlert(
+          err.response?.data?.message || "Application failed",
+          "danger"
+        )
+      
       }
     },
 
     async exportCSV() {
       try {
+      
         await axios.post("/student/export")
-        alert("Export started. You will be notified once it's ready.")
+      
+        this.$root.showAlert(
+          "Export started. You will be notified when it's ready.",
+          "info"
+        )
+      
       } catch (err) {
-        alert("Export failed")
+      
+        this.$root.showAlert("Export failed", "danger")
+      
       }
     },
 
