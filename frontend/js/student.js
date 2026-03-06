@@ -3,6 +3,16 @@ const StudentDashboard = {
     <div>
 
       <h4 class="mb-3">Student Dashboard</h4>
+      <div v-if="reminders.length"
+           class="alert alert-info mb-4">
+      
+        <strong>Upcoming Interviews</strong>
+      
+        <div v-for="r in reminders" :key="r.message">
+          {{ r.message }}
+        </div>
+      
+      </div>
 
       <!-- Profile Button -->
       <router-link to="/student/profile"
@@ -25,7 +35,7 @@ const StudentDashboard = {
       </div>
 
       <!-- Available Jobs -->
-      <h5>Available Placement Drives</h5>
+      <h5 class="mt-4 mb-3">Available Placement Drives</h5>
 
       <div class="row">
         <div class="col-md-4 mb-3"
@@ -50,7 +60,7 @@ const StudentDashboard = {
       <hr class="my-4">
 
       <!-- My Applications -->
-      <h5>My Applications</h5>
+      <h5 class="mt-4 mb-3">My Applications</h5>
 
       <div class="card shadow-sm mb-3 p-3"
            v-for="app in applications"
@@ -87,12 +97,13 @@ const StudentDashboard = {
           </div>
 
         </div>
+
       </div>
 
       <hr class="my-4">
 
       <!-- Placement History -->
-      <h5>Placement History</h5>
+      <h5 class="mt-4 mb-3">Placement History</h5>
 
       <div v-if="placements.length === 0"
            class="alert alert-light">
@@ -131,6 +142,7 @@ const StudentDashboard = {
       filteredJobs: [],
       applications: [],
       placements: [],
+      reminders: [],
       searchQuery: ""
     }
   },
@@ -138,6 +150,7 @@ const StudentDashboard = {
     await this.fetchJobs()
     await this.fetchApplications()
     await this.fetchPlacements()
+    await this.fetchReminders()
   },
   methods: {
 
@@ -155,6 +168,11 @@ const StudentDashboard = {
     async fetchPlacements() {
       const res = await axios.get("/student/placements")
       this.placements = res.data
+    },
+
+    async fetchReminders() {
+      const res = await axios.get("/student/reminders")
+      this.reminders = res.data
     },
 
     filterJobs() {

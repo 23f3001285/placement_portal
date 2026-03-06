@@ -1,8 +1,11 @@
+from datetime import datetime
+
 from flask import Blueprint, request, jsonify, current_app, send_from_directory
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from backend.models import db, Student, JobPosition, Application, Placement
 from backend.routes.utils import student_required
 from backend.tasks.exports import export_applications_csv
+from backend.cache import redis_client
 from backend.cache import redis_client
 from werkzeug.utils import secure_filename
 import json
@@ -193,3 +196,32 @@ def export_applications():
     return jsonify({"message": "Export started. You will be notified once done."})
 
 
+from datetime import datetime
+from backend.models import Application, Student
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask import jsonify
+
+@student_bp.route("/reminders", methods=["GET"])
+@jwt_required()
+def get_reminders():
+
+    user_id = int(get_jwt_identity())
+    student = Student.query.filter_by(user_id=user_id).first()
+
+    now = datetime.utcnow()
+
+    upcoming = Application.query.filter(
+        Application.student_id == student.id,
+        Application.status == "Interview",
+        Application.interview_date != None,
+        Application.interview_date > now
+    ).all()
+
+    reminders = []
+
+    for app in upcoming:
+        reminders.append({
+            "message": f"Interview at {app.interview_date} ({app.interview_location})"
+        })
+
+    return jsonify(reminders)
